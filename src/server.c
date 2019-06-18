@@ -54,17 +54,28 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
     char response[max_response_size];
 
     // Build HTTP response and store it in response
+    time_t current = time(NULL);
+    char *date = ctime(&current);
 
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+    size_t response_length = sprintf(
+        response,
+        "%s\n"
+        "Date: %s"
+        "Connection: close\n"
+        "Connect-Length: %d\n"
+        "Content-Type: %s\n"
+        "\n",
+        header,
+        date,
+        content_length,
+        content_type
+    );
 
     // Send it all!
     int rv = send(fd, response, response_length, 0);
-
-    if (rv < 0) {
+    if (rv < 0)
         perror("send");
-    }
+    rv = send(fd, body, content_length, 0);
 
     return rv;
 }
@@ -76,16 +87,13 @@ int send_response(int fd, char *header, char *content_type, void *body, int cont
 void get_d20(int fd)
 {
     // Generate a random number between 1 and 20 inclusive
-    
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+    int rand_num = (rand() % 20) + 1;
 
     // Use send_response() to send it back as text/plain data
+    char data[3];
+    sprintf(data, "%d\n", rand_num);
 
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+    send_response(fd, "HTTP/1.1 200 OK", "text/plain", data, strlen(data));
 }
 
 /**
@@ -119,9 +127,24 @@ void resp_404(int fd)
  */
 void get_file(int fd, struct cache *cache, char *request_path)
 {
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
+    char filepath[4096];
+    struct file_data *filedata;
+    char *mime_type;
+
+    snprintf(filepath, sizeof(filepath), "%s%s", SERVER_ROOT, request_path);
+    // printf("%s\n", filepath);
+    filedata = file_load(filepath);
+
+    if (filedata == NULL) {
+        resp_404(fd);
+        return;
+    }
+    
+    mime_type = mime_type_get(filepath);
+
+    send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
+
+    file_free(filedata);
 }
 
 /**
@@ -153,20 +176,23 @@ void handle_http_request(int fd, struct cache *cache)
         return;
     }
 
-
-    ///////////////////
-    // IMPLEMENT ME! //
-    ///////////////////
-
-    // Read the first two components of the first line of the request 
+    // Read the first two components of the first line of the request
+    const int max_method_size = 200, max_path_size = 8192;
+    char method[max_method_size], path[max_path_size];
+    sscanf(request, "%s %s", method, path);
  
     // If GET, handle the get endpoints
+    if (strcmp(method, "GET") == 0) {
+        //    Check if it's /d20 and handle that special case
+        //    Otherwise serve the requested file by calling get_file
+        if (strcmp(path, "/d20") == 0)
+            get_d20(fd);
+        else
+            get_file(fd, cache, path);
+    
+    }
 
-    //    Check if it's /d20 and handle that special case
-    //    Otherwise serve the requested file by calling get_file()
-
-
-    // (Stretch) If POST, handle the post request
+    // TODO: (Stretch) If POST, handle the post request
 }
 
 /**
