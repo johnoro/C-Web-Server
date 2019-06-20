@@ -127,6 +127,8 @@ void resp_404(int fd)
  */
 void get_file(int fd, struct cache *cache, char *request_path)
 {
+    (void)cache; // Silence errors
+
     char filepath[4096];
     struct file_data *filedata;
     char *mime_type;
@@ -155,9 +157,11 @@ void get_file(int fd, struct cache *cache, char *request_path)
  */
 char *find_start_of_body(char *header)
 {
+    (void)header;
     ///////////////////
     // IMPLEMENT ME! // (Stretch)
     ///////////////////
+    return NULL;
 }
 
 /**
