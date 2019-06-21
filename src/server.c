@@ -132,17 +132,26 @@ void get_file(int fd, struct cache *cache, char *request_path)
     char *mime_type;
 
     snprintf(filepath, sizeof(filepath), "%s%s", SERVER_ROOT, request_path);
-    // printf("%s\n", filepath);
-    filedata = file_load(filepath);
 
+    struct cache_entry *c_entry = cache_get(cache, filepath);
+    if (c_entry != NULL) {
+        send_response(fd, "HTTP/1.1 200 OK", c_entry->content_type, c_entry->content, c_entry->content_length);
+        return;
+    }
+
+    filedata = file_load(filepath);
     if (filedata == NULL) {
-        resp_404(fd);
+        if (strcmp(request_path, "/") == 0)
+            get_file(fd, cache, "/index.html");
+        else
+            resp_404(fd);
         return;
     }
     
     mime_type = mime_type_get(filepath);
 
     send_response(fd, "HTTP/1.1 200 OK", mime_type, filedata->data, filedata->size);
+    cache_put(cache, filepath, mime_type, filedata->data, filedata->size);
 
     file_free(filedata);
 }
@@ -155,9 +164,11 @@ void get_file(int fd, struct cache *cache, char *request_path)
  */
 char *find_start_of_body(char *header)
 {
+    (void)header;
     ///////////////////
     // IMPLEMENT ME! // (Stretch)
     ///////////////////
+    return NULL;
 }
 
 /**
